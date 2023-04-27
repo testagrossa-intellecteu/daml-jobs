@@ -1,0 +1,9 @@
+
+module Test where
+
+import Main (main)
+import Daml.Script
+
+setup: Script ()
+setup = script do
+    debug $ "setup: " <> main
