@@ -1,6 +1,6 @@
 module Test where
 
-import Main
+import Model
 import Daml.Script
 
 -- Helpers

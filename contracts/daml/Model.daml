@@ -1,0 +1,50 @@
+module Model where
+
+template JobOffer
+  with
+    hrManager: Party
+    public: Party
+  where
+    signatory hrManager
+    observer public
+
+    ensure hrManager /= public
+
+    nonconsuming choice NewJobApplication: ContractId JobApplication with
+        candidate: Party
+        summary: Text
+      controller candidate
+      do
+        assertMsg "hr manager cannot apply to a job offer" (hrManager /= candidate)
+        create $ JobApplication with candidate; hrManager; summary
+
+template JobApplication
+  with
+    candidate: Party
+    hrManager: Party
+    summary: Text
+  where
+    signatory candidate, hrManager
+
+    ensure candidate /= hrManager
+
+    key (candidate, hrManager): (Party, Party)
+    maintainer key._1
+
+    nonconsuming choice Accept: (ContractId JobContract)
+      controller hrManager
+      do
+        archive self
+        create $ JobContract with employee=candidate; hrManager
+
+template JobContract
+  with
+    hrManager: Party
+    employee: Party
+  where
+    signatory hrManager, employee
+
+    ensure hrManager /= employee
+
+    key (hrManager, employee): (Party, Party)
+    maintainer [key._1, key._2]
