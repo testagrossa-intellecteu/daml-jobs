@@ -25,6 +25,8 @@ template JobApplication
   where
     signatory candidate, hrManager
 
+    ensure candidate /= hrManager
+
     key (candidate, hrManager): (Party, Party)
     maintainer key._1
 

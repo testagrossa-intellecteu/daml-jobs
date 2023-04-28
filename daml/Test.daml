@@ -148,4 +148,6 @@ scenario7 = script do
   jobOfferCid <- canCreateJobOffer hrManager public
   let summary = "CandidateCSV.pdf"
   cantApplyToJobOffer jobOfferCid hrManager summary public
+  -- we need different parties to create a job application.
+  cantCreateJobApplication hrManager hrManager summary
   pure ()
