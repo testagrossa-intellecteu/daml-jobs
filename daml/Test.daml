@@ -9,8 +9,15 @@ canCreateJobOffer: Party -> Script (ContractId JobOffer)
 canCreateJobOffer hrManager =
     submit hrManager $ createCmd $ JobOffer with hrManager
 
+canCreateJobApplication: Party -> Party -> Text -> Script (ContractId JobApplication)
+canCreateJobApplication candidate hrManager summary =
+    submitMulti [candidate, hrManager] [] $ createCmd $ JobApplication with candidate; hrManager; summary
+
 setup: Script ()
 setup = script do
     hrManager <- allocateParty "HR Manager"
+    candidate <- allocateParty "Candidate"
     canCreateJobOffer hrManager
+    let summary = "CandidateCSV.pdf"
+    canCreateJobApplication candidate hrManager summary
     pure ()

@@ -6,3 +6,11 @@ template JobOffer
     hrManager: Party
   where
     signatory hrManager
+
+template JobApplication
+  with
+    candidate: Party
+    hrManager: Party
+    summary: Text
+  where
+    signatory candidate, hrManager
