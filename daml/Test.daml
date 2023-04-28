@@ -1,9 +1,16 @@
 
 module Test where
 
-import Main (main)
+import Main
 import Daml.Script
+
+
+canCreateJobOffer: Party -> Script (ContractId JobOffer)
+canCreateJobOffer hrManager =
+    submit hrManager $ createCmd $ JobOffer with hrManager
 
 setup: Script ()
 setup = script do
-    debug $ "setup: " <> main
+    hrManager <- allocateParty "HR Manager"
+    canCreateJobOffer hrManager
+    pure ()
