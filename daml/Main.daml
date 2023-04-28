@@ -26,3 +26,10 @@ template JobApplication
 
     key (candidate, hrManager): (Party, Party)
     maintainer key._1
+
+template JobContract
+  with
+    hrManager: Party
+    employee: Party
+  where
+    signatory hrManager, employee

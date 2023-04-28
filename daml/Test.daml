@@ -25,7 +25,7 @@ setupTestParties = script do
 
 canCreateJobOffer: Party -> Party -> Script (ContractId JobOffer)
 canCreateJobOffer hrManager public =
-    submit hrManager $ createCmd $ JobOffer with hrManager; public 
+    submit hrManager $ createCmd $ JobOffer with hrManager; public
 
 canCreateJobApplication: Party -> Party -> Text -> Script (ContractId JobApplication)
 canCreateJobApplication candidate hrManager summary =
@@ -38,6 +38,10 @@ cantCreateJobApplication candidate hrManager summary =
 canApplyToJobOffer: ContractId JobOffer -> Party -> Text -> Party -> Script (ContractId JobApplication)
 canApplyToJobOffer jobOfferCid candidate summary public =
     submitMulti [candidate] [public] $ exerciseCmd jobOfferCid NewJobApplication with candidate;summary
+
+canCreateJobContract: Party -> Party -> Script (ContractId JobContract)
+canCreateJobContract hrManager employee =
+    submitMulti [hrManager, employee] [] $ createCmd $ JobContract with hrManager; employee
 
 setup: Script ()
 setup = script do
@@ -53,5 +57,7 @@ setup = script do
     canApplyToJobOffer jobOfferCid candidate summary public
     
     cantCreateJobApplication candidate hrManager summary
+
+    canCreateJobContract hrManager candidate
     
     pure ()
