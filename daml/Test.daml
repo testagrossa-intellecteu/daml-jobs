@@ -4,20 +4,50 @@ module Test where
 import Main
 import Daml.Script
 
+-- Helpers
 
-canCreateJobOffer: Party -> Script (ContractId JobOffer)
-canCreateJobOffer hrManager =
-    submit hrManager $ createCmd $ JobOffer with hrManager
+data TestParties = TestParties with
+  hrManager: Party
+  candidate: Party
+  public: Party
+
+setupTestParties: Script TestParties
+setupTestParties = script do
+  hrManager <- allocateParty "HR Manager"
+  candidate <- allocateParty "Candidate"
+  public <- allocateParty "Public"
+  return $ TestParties with
+    hrManager
+    candidate
+    public
+
+-- Scenarios
+
+canCreateJobOffer: Party -> Party -> Script (ContractId JobOffer)
+canCreateJobOffer hrManager public =
+    submit hrManager $ createCmd $ JobOffer with hrManager; public 
 
 canCreateJobApplication: Party -> Party -> Text -> Script (ContractId JobApplication)
 canCreateJobApplication candidate hrManager summary =
     submitMulti [candidate, hrManager] [] $ createCmd $ JobApplication with candidate; hrManager; summary
 
+canApplyToJobOffer: ContractId JobOffer -> Party -> Text -> Party -> Script (ContractId JobApplication)
+canApplyToJobOffer jobOfferCid candidate summary public =
+    submitMulti [candidate] [public] $ exerciseCmd jobOfferCid NewJobApplication with candidate;summary
+
 setup: Script ()
 setup = script do
-    hrManager <- allocateParty "HR Manager"
-    candidate <- allocateParty "Candidate"
-    canCreateJobOffer hrManager
+    testParties <- setupTestParties
+    let hrManager = testParties.hrManager
+    let candidate = testParties.candidate
+    let public = testParties.public
+
+    jobOfferCid <- canCreateJobOffer hrManager public
+    
     let summary = "CandidateCSV.pdf"
+    
     canCreateJobApplication candidate hrManager summary
+    
+    canApplyToJobOffer jobOfferCid candidate summary public
+    
     pure ()

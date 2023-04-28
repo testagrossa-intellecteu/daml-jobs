@@ -4,8 +4,17 @@ module Main where
 template JobOffer
   with
     hrManager: Party
+    public: Party
   where
     signatory hrManager
+    observer public
+
+    nonconsuming choice NewJobApplication: ContractId JobApplication with
+        candidate: Party
+        summary: Text
+      controller candidate
+      do
+        create $ JobApplication with candidate; hrManager; summary
 
 template JobApplication
   with
