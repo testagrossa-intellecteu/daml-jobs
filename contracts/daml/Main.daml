@@ -1,6 +1,26 @@
 module Main where
 
+import Model
 import Daml.Script
+
+template HRManagerService 
+  with 
+    userAdmin: Party
+    public: Party
+    hrManager: Party
+  where 
+    signatory userAdmin 
+    observer hrManager, public
+    
+    ensure userAdmin /= hrManager
+
+    key (userAdmin, hrManager): (Party, Party)
+    maintainer key._1
+
+    nonconsuming choice CreateJobOffer: ContractId JobOffer
+      controller hrManager
+      do
+        create $ JobOffer with hrManager; public
 
 setup: Script ()
 setup = script do
@@ -8,14 +28,21 @@ setup = script do
     hrManager <- allocatePartyWithHint "HRManager" (PartyIdHint"hr")
     candidate <- allocatePartyWithHint "Candidate" (PartyIdHint "usr")
     public <- allocatePartyWithHint "Public" (PartyIdHint "pub")
+    userAdmin <- allocatePartyWithHint "UserAdmin" (PartyIdHint "admin") 
 
     -- 2. Construct user-ids from text
-    hrManagerId <- validateUserId "Recruiter"
-    candidateId <- validateUserId "Alice"
+    hrManagerId <- validateUserId "HR"
+    candidateId <- validateUserId "User"
+    publicId <- validateUserId "Pub"
+    userAdminId <- validateUserId "Admin"
 
     -- 3. Create users with the given rights
-    createUser (User hrManagerId (Some hrManager)) [CanActAs hrManager]
-    createUser (User candidateId (Some candidate)) [CanActAs candidate]
+    createUser (User publicId (Some public)) []
+    createUser (User hrManagerId (Some hrManager)) [CanActAs hrManager, CanReadAs public]
+    createUser (User candidateId (Some candidate)) [CanActAs candidate, CanReadAs public]
+    createUser (User userAdminId (Some userAdmin)) [CanActAs userAdmin, CanReadAs public]
 
-    -- TODO: create service
+    -- 4. Create an hr manager account service
+    submit userAdmin $ createCmd HRManagerService with userAdmin; hrManager; public
+
     return ()

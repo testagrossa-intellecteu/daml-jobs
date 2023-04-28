@@ -10,7 +10,8 @@ template JobOffer
 
     ensure hrManager /= public
 
-    nonconsuming choice NewJobApplication: ContractId JobApplication with
+    nonconsuming choice NewJobApplication: ContractId JobApplication
+      with
         candidate: Party
         summary: Text
       controller candidate
