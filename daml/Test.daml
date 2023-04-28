@@ -43,6 +43,10 @@ canCreateJobContract: Party -> Party -> Script (ContractId JobContract)
 canCreateJobContract hrManager employee =
     submitMulti [hrManager, employee] [] $ createCmd $ JobContract with hrManager; employee
 
+cantCreateJobContract: Party -> Party -> Script ()
+cantCreateJobContract hrManager employee =
+    submitMultiMustFail [hrManager, employee] [] $ createCmd $ JobContract with hrManager; employee
+
 setup: Script ()
 setup = script do
     testParties <- setupTestParties
@@ -59,5 +63,7 @@ setup = script do
     cantCreateJobApplication candidate hrManager summary
 
     canCreateJobContract hrManager candidate
+    
+    cantCreateJobContract hrManager candidate
     
     pure ()

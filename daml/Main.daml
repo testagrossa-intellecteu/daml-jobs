@@ -33,3 +33,6 @@ template JobContract
     employee: Party
   where
     signatory hrManager, employee
+
+    key (hrManager, employee): (Party, Party)
+    maintainer [key._1, key._2]
