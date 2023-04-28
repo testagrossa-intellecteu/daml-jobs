@@ -27,6 +27,12 @@ template JobApplication
     key (candidate, hrManager): (Party, Party)
     maintainer key._1
 
+    nonconsuming choice Accept: (ContractId JobContract)
+      controller hrManager
+      do
+        archive self
+        create $ JobContract with employee=candidate; hrManager
+
 template JobContract
   with
     hrManager: Party

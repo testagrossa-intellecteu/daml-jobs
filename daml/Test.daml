@@ -47,6 +47,10 @@ cantCreateJobContract: Party -> Party -> Script ()
 cantCreateJobContract hrManager employee =
     submitMultiMustFail [hrManager, employee] [] $ createCmd $ JobContract with hrManager; employee
 
+canAcceptJobApplication: ContractId JobApplication -> Party -> Script (ContractId JobContract)
+canAcceptJobApplication jobApplicationCid hrManager =
+    submit hrManager $ exerciseCmd jobApplicationCid Accept
+
 setup: Script ()
 setup = script do
     testParties <- setupTestParties
@@ -58,12 +62,12 @@ setup = script do
     
     let summary = "CandidateCSV.pdf"
     
-    canApplyToJobOffer jobOfferCid candidate summary public
+    jobApplicationCid <- canApplyToJobOffer jobOfferCid candidate summary public
     
     cantCreateJobApplication candidate hrManager summary
 
-    canCreateJobContract hrManager candidate
-    
+    canAcceptJobApplication jobApplicationCid hrManager
+
     cantCreateJobContract hrManager candidate
     
     pure ()
