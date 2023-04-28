@@ -78,6 +78,8 @@ setup = script do
     
     cantCreateJobApplication candidate hrManager summary
 
+    cantAcceptJobApplication jobApplicationCid candidate
+    
     canAcceptJobApplication jobApplicationCid hrManager
     
     cantAcceptJobApplication jobApplicationCid hrManager
