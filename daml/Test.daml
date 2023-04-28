@@ -137,3 +137,15 @@ scenario6 = script do
   jobApplicationCid <- canApplyToJobOffer jobOfferCid candidate summary public
   cantAcceptJobApplication jobApplicationCid candidate
   pure ()
+
+-- hr manager `cant` apply to a job offer.
+scenario7: Script ()
+scenario7 = script do
+  testParties <- setupTestParties
+  let hrManager = testParties.hrManager
+  let public = testParties.public
+  let candidate = testParties.candidate
+  jobOfferCid <- canCreateJobOffer hrManager public
+  let summary = "CandidateCSV.pdf"
+  cantApplyToJobOffer jobOfferCid hrManager summary public
+  pure ()

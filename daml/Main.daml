@@ -14,6 +14,7 @@ template JobOffer
         summary: Text
       controller candidate
       do
+        assertMsg "hr manager cannot apply to a job offer" (hrManager /= candidate)
         create $ JobApplication with candidate; hrManager; summary
 
 template JobApplication
