@@ -1,5 +1,25 @@
 module Main where
 
+import Daml.Script
+
+setup: Script ()
+setup = script do
+    -- 1. Allocate parties with the given display name
+    hrManager <- allocatePartyWithHint "HRManager" (PartyIdHint"hr")
+    candidate <- allocatePartyWithHint "Candidate" (PartyIdHint "usr")
+    public <- allocatePartyWithHint "Public" (PartyIdHint "pub")
+
+    -- 2. Construct user-ids from text
+    hrManagerId <- validateUserId "Recruiter"
+    candidateId <- validateUserId "Alice"
+
+    -- 3. Create users with the given rights
+    createUser (User hrManagerId (Some hrManager)) [CanActAs hrManager]
+    createUser (User candidateId (Some candidate)) [CanActAs candidate]
+
+    -- TODO: create service
+    return ()
+
 template JobOffer
   with
     hrManager: Party

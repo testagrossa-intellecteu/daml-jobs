@@ -1,7 +1,7 @@
 sdk-version: 2.6.3
 name: daml-jobs
 source: daml
-init-script: Test:setup
+init-script: Main:setup
 version: 0.0.1
 dependencies:
   - daml-prim
