@@ -25,6 +25,10 @@ canCreateJobOffer: Party -> Party -> Script (ContractId JobOffer)
 canCreateJobOffer hrManager public =
   submit hrManager $ createCmd $ JobOffer with hrManager; public
 
+cantCreateJobOffer: Party -> Party -> Script ()
+cantCreateJobOffer hrManager public =
+  submitMustFail hrManager $ createCmd $ JobOffer with hrManager; public
+
 canCreateJobApplication: Party -> Party -> Text -> Script (ContractId JobApplication)
 canCreateJobApplication candidate hrManager summary =
   submitMulti [candidate, hrManager] [] $ createCmd $ JobApplication with candidate; hrManager; summary
@@ -148,6 +152,13 @@ scenario7 = script do
   jobOfferCid <- canCreateJobOffer hrManager public
   let summary = "CandidateCSV.pdf"
   cantApplyToJobOffer jobOfferCid hrManager summary public
-  -- we need different parties to create a job application.
-  cantCreateJobApplication hrManager hrManager summary
   pure ()
+
+-- `cant` create contracts using same parties.
+scenario8: Script ()
+scenario8 = script do
+  random <- allocateParty "Random"
+  let summary = "CandidateCSV.pdf"
+  cantCreateJobOffer random random
+  cantCreateJobApplication random random summary
+  cantCreateJobContract random random

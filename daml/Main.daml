@@ -9,6 +9,8 @@ template JobOffer
     signatory hrManager
     observer public
 
+    ensure hrManager /= public
+
     nonconsuming choice NewJobApplication: ContractId JobApplication with
         candidate: Party
         summary: Text
@@ -42,6 +44,8 @@ template JobContract
     employee: Party
   where
     signatory hrManager, employee
+
+    ensure hrManager /= employee
 
     key (hrManager, employee): (Party, Party)
     maintainer [key._1, key._2]
