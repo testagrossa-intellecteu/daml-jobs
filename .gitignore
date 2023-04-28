@@ -1,3 +1,5 @@
-/.daml
-/log
-navigator.log
+contracts/.daml
+contracts/log
+contracts/navigator.log
+contracts/log
+contracts/artifacts
