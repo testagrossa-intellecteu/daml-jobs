@@ -6,11 +6,10 @@ import Daml.Script
 template HRManagerService 
   with 
     userAdmin: Party
-    public: Party
     hrManager: Party
   where 
     signatory userAdmin 
-    observer hrManager, public
+    observer hrManager
     
     ensure userAdmin /= hrManager
 
@@ -18,6 +17,8 @@ template HRManagerService
     maintainer key._1
 
     nonconsuming choice CreateJobOffer: ContractId JobOffer
+      with
+        public: Party
       controller hrManager
       do
         create $ JobOffer with hrManager; public
@@ -27,22 +28,35 @@ setup = script do
     -- 1. Allocate parties with the given display name
     hrManager <- allocatePartyWithHint "HRManager" (PartyIdHint"hr")
     candidate <- allocatePartyWithHint "Candidate" (PartyIdHint "usr")
+    otherCandidate <- allocatePartyWithHint "OtherCandidate" (PartyIdHint "other-usr")
     public <- allocatePartyWithHint "Public" (PartyIdHint "pub")
     userAdmin <- allocatePartyWithHint "UserAdmin" (PartyIdHint "admin") 
 
     -- 2. Construct user-ids from text
     hrManagerId <- validateUserId "HR"
     candidateId <- validateUserId "User"
+    otherCandidateId <- validateUserId "OtherUser"
     publicId <- validateUserId "Pub"
     userAdminId <- validateUserId "Admin"
 
     -- 3. Create users with the given rights
-    createUser (User publicId (Some public)) []
+    createUser (User publicId (Some public)) [CanActAs public]
     createUser (User hrManagerId (Some hrManager)) [CanActAs hrManager, CanReadAs public]
     createUser (User candidateId (Some candidate)) [CanActAs candidate, CanReadAs public]
+    createUser (User otherCandidateId (Some otherCandidate)) [CanActAs otherCandidate, CanReadAs public]
     createUser (User userAdminId (Some userAdmin)) [CanActAs userAdmin, CanReadAs public]
 
     -- 4. Create an hr manager account service
-    submit userAdmin $ createCmd HRManagerService with userAdmin; hrManager; public
+    hrServiceCid <- submit userAdmin $ createCmd HRManagerService with userAdmin; hrManager
+    
+    -- 5. Create a job offer
+    jobOfferCid <- submit hrManager $ exerciseCmd hrServiceCid CreateJobOffer with public
+
+    ---6. Create job applications for both candidates to above job offer
+    let (summary, otherSummary) = ("CSV.pdf", "OtherCSV.pdf")
+    submitMulti [candidate] [public] $ exerciseCmd jobOfferCid NewJobApplication with candidate; summary
+    submitMulti [otherCandidate] [public] $ exerciseCmd jobOfferCid NewJobApplication with
+      candidate=otherCandidate
+      summary=otherSummary
 
     return ()
