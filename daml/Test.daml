@@ -31,6 +31,10 @@ canCreateJobApplication: Party -> Party -> Text -> Script (ContractId JobApplica
 canCreateJobApplication candidate hrManager summary =
     submitMulti [candidate, hrManager] [] $ createCmd $ JobApplication with candidate; hrManager; summary
 
+cantCreateJobApplication: Party -> Party -> Text -> Script ()
+cantCreateJobApplication candidate hrManager summary =
+    submitMultiMustFail [candidate, hrManager] [] $ createCmd $ JobApplication with candidate; hrManager; summary
+
 canApplyToJobOffer: ContractId JobOffer -> Party -> Text -> Party -> Script (ContractId JobApplication)
 canApplyToJobOffer jobOfferCid candidate summary public =
     submitMulti [candidate] [public] $ exerciseCmd jobOfferCid NewJobApplication with candidate;summary
@@ -46,8 +50,8 @@ setup = script do
     
     let summary = "CandidateCSV.pdf"
     
-    canCreateJobApplication candidate hrManager summary
-    
     canApplyToJobOffer jobOfferCid candidate summary public
+    
+    cantCreateJobApplication candidate hrManager summary
     
     pure ()

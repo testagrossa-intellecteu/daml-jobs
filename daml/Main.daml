@@ -23,3 +23,6 @@ template JobApplication
     summary: Text
   where
     signatory candidate, hrManager
+
+    key (candidate, hrManager): (Party, Party)
+    maintainer key._1
