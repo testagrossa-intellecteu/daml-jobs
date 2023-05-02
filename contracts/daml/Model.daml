@@ -40,6 +40,7 @@ template JobOfferPublicState
         jobApplicationWinnerCid: ContractId JobApplication
       controller hrManager
       do
+        assertMsg "winner not exists" $ (Set.member jobApplicationWinnerCid jobApplicationCids)
         forA_ (Set.filter (/= jobApplicationWinnerCid) jobApplicationCids) $
           \jobApplicationCid -> exercise jobApplicationCid Reject
 

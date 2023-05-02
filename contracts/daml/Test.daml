@@ -58,6 +58,14 @@ cantApplyToJobOffer: ContractId JobOffer -> Party -> Text -> Party -> Script ()
 cantApplyToJobOffer jobOfferCid candidate summary public =
   submitMultiMustFail [candidate] [public] $ exerciseCmd jobOfferCid NewJobApplication with candidate;summary
 
+canTerminateJobOffer: ContractId JobOffer -> Party -> ContractId JobApplication -> Script ()
+canTerminateJobOffer jobOfferCid hrManager jobApplicationWinnerCid =
+  submit hrManager $ exerciseCmd jobOfferCid TerminateJobOffer with jobApplicationWinnerCid
+
+cantTerminateJobOffer: ContractId JobOffer -> Party -> ContractId JobApplication -> Script ()
+cantTerminateJobOffer jobOfferCid hrManager jobApplicationWinnerCid =
+  submitMustFail hrManager $ exerciseCmd jobOfferCid TerminateJobOffer with jobApplicationWinnerCid
+
 canCreateJobContract: Party -> Party -> Script (ContractId JobContract)
 canCreateJobContract hrManager employee =
   submitMulti [hrManager, employee] [] $ createCmd $ JobContract with hrManager; employee
@@ -368,4 +376,25 @@ scenario16 = script do
   canAcceptJobApplication jobApplicationCid hrManager
   nbrOfJobApplications2 <- queryNbrOfJobApplications public (hrManager, jobId)  
   assertMsg "wrong nbr of job applications" $ nbrOfJobApplications2 == (None)
+  pure ()
+
+-- hr manager `cannot` terminate a job offer using a non existing job application cid.
+scenario17: Script ()
+scenario17 = script do
+  testParties <- setupTestParties
+  let hrManager = testParties.hrManager
+  let public = testParties.public
+  let candidate = testParties.candidate
+  let other = testParties.other
+  let jobId = 1
+  canCreateJobOfferPublicState jobId hrManager public
+  jobOfferCid <- canCreateJobOffer jobId hrManager public
+  let (summary, otherSummary) = ("CandidateCSV.pdf", "OtherCandidateCSV.pdf")
+  canApplyToJobOffer jobOfferCid candidate summary public
+  jobApplicationCid <- canCreateJobApplication jobId other hrManager summary
+  -- public observes only the registration done through job offer
+  nbrOfJobApplications1 <- queryNbrOfJobApplications public (hrManager, jobId)  
+  assertMsg "wrong nbr of job applications" $ nbrOfJobApplications1 == Some 1
+  -- hr manager fails to terminate job offer using wrong job application cid.
+  cantTerminateJobOffer jobOfferCid hrManager jobApplicationCid
   pure ()
