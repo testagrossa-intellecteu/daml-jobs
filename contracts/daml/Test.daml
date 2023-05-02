@@ -9,16 +9,19 @@ import qualified DA.Set as Set
 data TestParties = TestParties with
   hrManager: Party
   candidate: Party
+  other: Party
   public: Party
 
 setupTestParties: Script TestParties
 setupTestParties = script do
   hrManager <- allocateParty "HR Manager"
   candidate <- allocateParty "Candidate"
+  other <- allocateParty "OtherCandidate"
   public <- allocateParty "Public"
   return $ TestParties with
     hrManager
     candidate
+    other
     public
 
 canCreateJobOfferPublicState: Int -> Party -> Party -> Script (ContractId JobOfferPublicState)
@@ -313,3 +316,23 @@ scenario14 = script do
   jobApplicationCid <- canApplyToJobOffer jobOfferCid candidate summary public
   cantDeclineJobApplication jobApplicationCid hrManager
   pure ()
+
+-- public `can` observe when new job applications are registered to the job offer public state.
+scenario15: Script ()
+scenario15 = script do
+  testParties <- setupTestParties
+  let hrManager = testParties.hrManager
+  let public = testParties.public
+  let candidate = testParties.candidate
+  let other = testParties.other
+  let jobId = 1
+  canCreateJobOfferPublicState jobId hrManager public
+  jobOfferCid <- canCreateJobOffer jobId hrManager public
+  let (summary, otherSummary) = ("CandidateCSV.pdf", "OtherCandidateCSV.pdf")
+  canApplyToJobOffer jobOfferCid candidate summary public
+  canApplyToJobOffer jobOfferCid other otherSummary public
+  -- public observes both registrations
+  queryPublicStateResult <- queryContractKey @JobOfferPublicState public (hrManager, jobId)
+  let maybePublicState = snd <$> queryPublicStateResult
+  let nbrOfJobApplications = (\state -> Set.size state.jobApplicationCids) <$> maybePublicState
+  assertMsg "wrong nbr of job applications" $ nbrOfJobApplications == Some 2

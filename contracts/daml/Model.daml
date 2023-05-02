@@ -1,6 +1,7 @@
 module Model where
 
 import DA.Set (Set)
+import qualified DA.Set as Set
 
 template JobOfferPublicState
   with
@@ -16,6 +17,22 @@ template JobOfferPublicState
     
     key (hrManager, jobId): (Party, Int)
     maintainer key._1
+
+    choice RegisterJobApplication: ContractId JobOfferPublicState
+      with
+        jobApplicationCid: ContractId JobApplication
+      controller hrManager
+      do
+        create this with
+          jobApplicationCids = Set.insert jobApplicationCid jobApplicationCids
+
+    choice RemoveJobApplication: ContractId JobOfferPublicState
+      with
+        jobApplicationCid: ContractId JobApplication
+      controller hrManager
+      do
+        create this with
+          jobApplicationCids = Set.delete jobApplicationCid jobApplicationCids
 
 template JobOffer
   with
@@ -38,7 +55,9 @@ template JobOffer
       controller candidate
       do
         assertMsg "hr manager cannot apply to a job offer" (hrManager /= candidate)
-        create $ JobApplication with candidate; hrManager; summary
+        jobApplicationCid <- create $ JobApplication with candidate; hrManager; summary
+        exerciseByKey @JobOfferPublicState (hrManager, jobId) RegisterJobApplication with jobApplicationCid
+        pure jobApplicationCid
 
 template JobApplication
   with
