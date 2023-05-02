@@ -11,6 +11,8 @@ template JobOfferPublicState
     public: Party
     -- XXX: here we keep the contract ids instead of the contract keys because
     -- we want candidates to remain private for the public observer.
+    -- this attribute is meant for public observers to know how many candidates
+    -- are in pending to accept/reject for the job offer.
     jobApplicationCids: Set (ContractId JobApplication)
   where
     signatory hrManager
