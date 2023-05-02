@@ -15,7 +15,12 @@ Daml templates designed for a job platform for proposing job offers to get appli
 - Applying for a `job offer` will generate a `job application`.
 - `Job applications` are either approved or rejected by its respective `job offer` manager.
 - If the manager excercises the `reject`, the `job application` gets archived.
-- Upon manager excercises the `accept` choice, the `job application` gets archived, and a `job` contract is created.
+- Candidates can also `decline` their `job applications` to get them archived.
+- Upon manager excercises the `accept` choice:
+  + a `job` contract is created.
+  + the `job offer` gets terminated.
+  + the winner `job application` gets archived.
+- Terminating a `job offer` will result in all job applications but the winner to get rejected and archived.
 
 ### Building
 To compile the project, run under contracts/ folder:
