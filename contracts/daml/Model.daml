@@ -24,6 +24,7 @@ template JobOfferPublicState
         jobApplicationCid: ContractId JobApplication
       controller hrManager
       do
+        fetch jobApplicationCid
         create this with
           jobApplicationCids = Set.insert jobApplicationCid jobApplicationCids
 
@@ -32,6 +33,7 @@ template JobOfferPublicState
         jobApplicationCid: ContractId JobApplication
       controller hrManager
       do
+        fetch jobApplicationCid
         create this with
           jobApplicationCids = Set.delete jobApplicationCid jobApplicationCids
 
@@ -40,6 +42,7 @@ template JobOfferPublicState
         jobApplicationWinnerCid: ContractId JobApplication
       controller hrManager
       do
+        fetch jobApplicationWinnerCid
         assertMsg "winner not exists" $ (Set.member jobApplicationWinnerCid jobApplicationCids)
         forA_ (Set.filter (/= jobApplicationWinnerCid) jobApplicationCids) $
           \jobApplicationCid -> exercise jobApplicationCid Reject
@@ -103,8 +106,8 @@ template JobApplication
     nonconsuming choice Accept: (ContractId JobContract)
       controller hrManager
       do
-        exerciseByKey @JobOffer (hrManager, jobId) TerminateJobOffer with jobApplicationWinnerCid=self
         jobContractCid <- create $ JobContract with employee=candidate; hrManager
+        exerciseByKey @JobOffer (hrManager, jobId) TerminateJobOffer with jobApplicationWinnerCid=self
         archive self
         pure jobContractCid
     
