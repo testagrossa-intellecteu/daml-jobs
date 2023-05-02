@@ -9,6 +9,8 @@ template JobOfferPublicState
     jobId: Int
     hrManager: Party
     public: Party
+    -- XXX: here we keep the contract ids instead of the contract keys because
+    -- we want candidates to remain private for the public observer.
     jobApplicationCids: Set (ContractId JobApplication)
   where
     signatory hrManager
