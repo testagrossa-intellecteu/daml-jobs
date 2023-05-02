@@ -43,6 +43,11 @@ template JobApplication
       do
         archive self
 
+    nonconsuming choice Decline: ()
+      controller candidate
+      do
+        archive self
+
 template JobContract
   with
     hrManager: Party
