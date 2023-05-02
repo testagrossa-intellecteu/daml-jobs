@@ -337,11 +337,35 @@ scenario15 = script do
   jobOfferCid <- canCreateJobOffer jobId hrManager public
   let (summary, otherSummary) = ("CandidateCSV.pdf", "OtherCandidateCSV.pdf")
   canApplyToJobOffer jobOfferCid candidate summary public
-  jobOfferCid <- canApplyToJobOffer jobOfferCid other otherSummary public
+  jobApplicationCid <- canApplyToJobOffer jobOfferCid other otherSummary public
   -- public observes both registrations
   nbrOfJobApplications1 <- queryNbrOfJobApplications public (hrManager, jobId)  
   assertMsg "wrong nbr of job applications" $ nbrOfJobApplications1 == Some 2
   -- public observers application rejected
-  canRejectJobApplication jobOfferCid hrManager
+  canRejectJobApplication jobApplicationCid hrManager
   nbrOfJobApplications2 <- queryNbrOfJobApplications public (hrManager, jobId)  
   assertMsg "wrong nbr of job applications" $ nbrOfJobApplications2 == Some 1
+
+-- upon accepting a job application, the rest should be archived and the job offer should be terminated
+-- alog with the public state.
+scenario16: Script ()
+scenario16 = script do
+  testParties <- setupTestParties
+  let hrManager = testParties.hrManager
+  let public = testParties.public
+  let candidate = testParties.candidate
+  let other = testParties.other
+  let jobId = 1
+  canCreateJobOfferPublicState jobId hrManager public
+  jobOfferCid <- canCreateJobOffer jobId hrManager public
+  let (summary, otherSummary) = ("CandidateCSV.pdf", "OtherCandidateCSV.pdf")
+  canApplyToJobOffer jobOfferCid candidate summary public
+  jobApplicationCid <- canApplyToJobOffer jobOfferCid other otherSummary public
+  -- public observes both registrations
+  nbrOfJobApplications1 <- queryNbrOfJobApplications public (hrManager, jobId)  
+  assertMsg "wrong nbr of job applications" $ nbrOfJobApplications1 == Some 2
+  -- public observers the rest of applications get rejected
+  canAcceptJobApplication jobApplicationCid hrManager
+  nbrOfJobApplications2 <- queryNbrOfJobApplications public (hrManager, jobId)  
+  assertMsg "wrong nbr of job applications" $ nbrOfJobApplications2 == (None)
+  pure ()

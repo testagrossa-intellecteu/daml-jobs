@@ -2,6 +2,7 @@ module Model where
 
 import DA.Set (Set)
 import qualified DA.Set as Set
+import DA.Foldable (forA_)
 
 template JobOfferPublicState
   with
@@ -34,6 +35,14 @@ template JobOfferPublicState
         create this with
           jobApplicationCids = Set.delete jobApplicationCid jobApplicationCids
 
+    nonconsuming choice Terminate: ()
+      with
+        jobApplicationWinnerCid: ContractId JobApplication
+      controller hrManager
+      do
+        forA_ (Set.filter (/= jobApplicationWinnerCid) jobApplicationCids) $
+          \jobApplicationCid -> exercise jobApplicationCid Reject
+
 template JobOffer
   with
     jobId: Int
@@ -59,6 +68,23 @@ template JobOffer
         exerciseByKey @JobOfferPublicState (hrManager, jobId) RegisterJobApplication with jobApplicationCid
         pure jobApplicationCid
 
+    nonconsuming choice RejectJobApplication: ()  
+      with
+        jobApplicationCid: ContractId JobApplication
+      controller hrManager
+      do 
+        exerciseByKey @JobOfferPublicState (hrManager, jobId) RemoveJobApplication with jobApplicationCid
+        pure ()
+
+    nonconsuming choice TerminateJobOffer: ()
+      with
+        jobApplicationWinnerCid: ContractId JobApplication
+      controller hrManager
+      do
+        exerciseByKey @JobOfferPublicState (hrManager, jobId) Terminate with jobApplicationWinnerCid
+        exerciseByKey @JobOfferPublicState (hrManager, jobId) Archive
+        archive self
+    
 template JobApplication
   with
     jobId: Int
@@ -77,12 +103,13 @@ template JobApplication
       controller hrManager
       do
         archive self
+        exerciseByKey @JobOffer (hrManager, jobId) TerminateJobOffer with jobApplicationWinnerCid=self
         create $ JobContract with employee=candidate; hrManager
     
     nonconsuming choice Reject: ()
       controller hrManager
       do
-        exerciseByKey @JobOfferPublicState (hrManager, jobId) RemoveJobApplication with jobApplicationCid=self
+        exerciseByKey @JobOffer (hrManager, jobId) RejectJobApplication with jobApplicationCid=self
         archive self
 
     nonconsuming choice Decline: ()
