@@ -55,12 +55,13 @@ template JobOffer
       controller candidate
       do
         assertMsg "hr manager cannot apply to a job offer" (hrManager /= candidate)
-        jobApplicationCid <- create $ JobApplication with candidate; hrManager; summary
+        jobApplicationCid <- create $ JobApplication with jobId; candidate; hrManager; summary
         exerciseByKey @JobOfferPublicState (hrManager, jobId) RegisterJobApplication with jobApplicationCid
         pure jobApplicationCid
 
 template JobApplication
   with
+    jobId: Int
     candidate: Party
     hrManager: Party
     summary: Text
@@ -69,7 +70,7 @@ template JobApplication
 
     ensure candidate /= hrManager
 
-    key (candidate, hrManager): (Party, Party)
+    key (candidate, hrManager, jobId): (Party, Party, Int)
     maintainer key._1
 
     nonconsuming choice Accept: (ContractId JobContract)
@@ -81,6 +82,7 @@ template JobApplication
     nonconsuming choice Reject: ()
       controller hrManager
       do
+        exerciseByKey @JobOfferPublicState (hrManager, jobId) RemoveJobApplication with jobApplicationCid=self
         archive self
 
     nonconsuming choice Decline: ()

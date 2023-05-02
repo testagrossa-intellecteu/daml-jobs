@@ -42,13 +42,13 @@ cantCreateJobOffer: Int -> Party -> Party -> Script ()
 cantCreateJobOffer jobId hrManager public =
   submitMustFail hrManager $ createCmd $ JobOffer with jobId; hrManager; public
 
-canCreateJobApplication: Party -> Party -> Text -> Script (ContractId JobApplication)
-canCreateJobApplication candidate hrManager summary =
-  submitMulti [candidate, hrManager] [] $ createCmd $ JobApplication with candidate; hrManager; summary
+canCreateJobApplication: Int -> Party -> Party -> Text -> Script (ContractId JobApplication)
+canCreateJobApplication jobId candidate hrManager summary =
+  submitMulti [candidate, hrManager] [] $ createCmd $ JobApplication with jobId; candidate; hrManager; summary
 
-cantCreateJobApplication: Party -> Party -> Text -> Script ()
-cantCreateJobApplication candidate hrManager summary =
-  submitMultiMustFail [candidate, hrManager] [] $ createCmd $ JobApplication with candidate; hrManager; summary
+cantCreateJobApplication: Int -> Party -> Party -> Text -> Script ()
+cantCreateJobApplication jobId candidate hrManager summary =
+  submitMultiMustFail [candidate, hrManager] [] $ createCmd $ JobApplication with jobId; candidate; hrManager; summary
 
 canApplyToJobOffer: ContractId JobOffer -> Party -> Text -> Party -> Script (ContractId JobApplication)
 canApplyToJobOffer jobOfferCid candidate summary public =
@@ -83,12 +83,19 @@ cantRejectJobApplication jobApplicationCid hrManager =
   submitMustFail hrManager $ exerciseCmd jobApplicationCid Reject
 
 canDeclineJobApplication: ContractId JobApplication -> Party -> Script ()
-canDeclineJobApplication jobApplicationCid hrManager =
-  submit hrManager $ exerciseCmd jobApplicationCid Decline
+canDeclineJobApplication jobApplicationCid candidate =
+  submit candidate $ exerciseCmd jobApplicationCid Decline
 
 cantDeclineJobApplication: ContractId JobApplication -> Party -> Script ()
-cantDeclineJobApplication jobApplicationCid hrManager =
-  submitMustFail hrManager $ exerciseCmd jobApplicationCid Decline
+cantDeclineJobApplication jobApplicationCid candidate =
+  submitMustFail candidate $ exerciseCmd jobApplicationCid Decline
+
+queryNbrOfJobApplications : Party -> (Party, Int) -> Script (Optional Int)
+queryNbrOfJobApplications public (hrManager, jobId) = do
+  queryPublicStateResult <- queryContractKey @JobOfferPublicState public (hrManager, jobId)
+  let maybePublicState = snd <$> queryPublicStateResult
+  let nbrOfJobApplications = (\state -> Set.size state.jobApplicationCids) <$> maybePublicState
+  return nbrOfJobApplications
 
 -- Scenarios
 
@@ -148,7 +155,7 @@ scenario3 = script do
   canApplyToJobOffer jobOfferCid candidate summary public
   cantApplyToJobOffer jobOfferCid candidate summary public
   -- once the job application is created we cannot create it again.
-  cantCreateJobApplication candidate hrManager summary
+  cantCreateJobApplication jobId candidate hrManager summary
   pure ()
 
 -- hr manager `can` accept a job application.
@@ -222,7 +229,7 @@ scenario8 = script do
   canCreateJobOfferPublicState jobId random other
   cantCreateJobOffer jobId random random
   let summary = "CandidateCSV.pdf"
-  cantCreateJobApplication random random summary
+  cantCreateJobApplication jobId random random summary
   cantCreateJobContract random random
 
 -- hr manager `can` reject a job application.
@@ -317,7 +324,7 @@ scenario14 = script do
   cantDeclineJobApplication jobApplicationCid hrManager
   pure ()
 
--- public `can` observe when new job applications are registered to the job offer public state.
+-- public `can` observe when new job applications are registered/rejected to the job offer public state.
 scenario15: Script ()
 scenario15 = script do
   testParties <- setupTestParties
@@ -330,9 +337,11 @@ scenario15 = script do
   jobOfferCid <- canCreateJobOffer jobId hrManager public
   let (summary, otherSummary) = ("CandidateCSV.pdf", "OtherCandidateCSV.pdf")
   canApplyToJobOffer jobOfferCid candidate summary public
-  canApplyToJobOffer jobOfferCid other otherSummary public
+  jobOfferCid <- canApplyToJobOffer jobOfferCid other otherSummary public
   -- public observes both registrations
-  queryPublicStateResult <- queryContractKey @JobOfferPublicState public (hrManager, jobId)
-  let maybePublicState = snd <$> queryPublicStateResult
-  let nbrOfJobApplications = (\state -> Set.size state.jobApplicationCids) <$> maybePublicState
-  assertMsg "wrong nbr of job applications" $ nbrOfJobApplications == Some 2
+  nbrOfJobApplications1 <- queryNbrOfJobApplications public (hrManager, jobId)  
+  assertMsg "wrong nbr of job applications" $ nbrOfJobApplications1 == Some 2
+  -- public observers application rejected
+  canRejectJobApplication jobOfferCid hrManager
+  nbrOfJobApplications2 <- queryNbrOfJobApplications public (hrManager, jobId)  
+  assertMsg "wrong nbr of job applications" $ nbrOfJobApplications2 == Some 1
