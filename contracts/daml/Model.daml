@@ -102,9 +102,10 @@ template JobApplication
     nonconsuming choice Accept: (ContractId JobContract)
       controller hrManager
       do
-        archive self
         exerciseByKey @JobOffer (hrManager, jobId) TerminateJobOffer with jobApplicationWinnerCid=self
-        create $ JobContract with employee=candidate; hrManager
+        jobContractCid <- create $ JobContract with employee=candidate; hrManager
+        archive self
+        pure jobContractCid
     
     nonconsuming choice Reject: ()
       controller hrManager
@@ -115,6 +116,7 @@ template JobApplication
     nonconsuming choice Decline: ()
       controller candidate
       do
+        exerciseByKey @JobOffer (hrManager, jobId) RejectJobApplication with jobApplicationCid=self        
         archive self
 
 template JobContract

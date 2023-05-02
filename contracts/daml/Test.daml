@@ -82,9 +82,9 @@ cantRejectJobApplication: ContractId JobApplication -> Party -> Script ()
 cantRejectJobApplication jobApplicationCid hrManager =
   submitMustFail hrManager $ exerciseCmd jobApplicationCid Reject
 
-canDeclineJobApplication: ContractId JobApplication -> Party -> Script ()
-canDeclineJobApplication jobApplicationCid candidate =
-  submit candidate $ exerciseCmd jobApplicationCid Decline
+canDeclineJobApplication: ContractId JobApplication -> Party -> Party -> Script ()
+canDeclineJobApplication jobApplicationCid candidate public =
+  submitMulti [candidate] [public] $ exerciseCmd jobApplicationCid Decline
 
 cantDeclineJobApplication: ContractId JobApplication -> Party -> Script ()
 cantDeclineJobApplication jobApplicationCid candidate =
@@ -290,7 +290,7 @@ scenario12 = script do
   jobOfferCid <- canCreateJobOffer jobId hrManager public
   let summary = "CandidateCSV.pdf"
   jobApplicationCid <- canApplyToJobOffer jobOfferCid candidate summary public
-  canDeclineJobApplication jobApplicationCid candidate
+  canDeclineJobApplication jobApplicationCid candidate public
   pure ()
 
 -- candidate `cant` decline a job application twice.
@@ -305,7 +305,7 @@ scenario13 = script do
   jobOfferCid <- canCreateJobOffer jobId hrManager public
   let summary = "CandidateCSV.pdf"
   jobApplicationCid <- canApplyToJobOffer jobOfferCid candidate summary public
-  canDeclineJobApplication jobApplicationCid candidate
+  canDeclineJobApplication jobApplicationCid candidate public
   cantDeclineJobApplication jobApplicationCid candidate
   pure ()
 
