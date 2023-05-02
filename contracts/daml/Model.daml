@@ -37,6 +37,11 @@ template JobApplication
       do
         archive self
         create $ JobContract with employee=candidate; hrManager
+    
+    nonconsuming choice Reject: ()
+      controller hrManager
+      do
+        archive self
 
 template JobContract
   with

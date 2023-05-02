@@ -60,6 +60,14 @@ cantAcceptJobApplication: ContractId JobApplication -> Party -> Script ()
 cantAcceptJobApplication jobApplicationCid hrManager =
   submitMustFail hrManager $ exerciseCmd jobApplicationCid Accept
 
+canRejectJobApplication: ContractId JobApplication -> Party -> Script ()
+canRejectJobApplication jobApplicationCid hrManager =
+  submit hrManager $ exerciseCmd jobApplicationCid Reject
+
+cantRejectJobApplication: ContractId JobApplication -> Party -> Script ()
+cantRejectJobApplication jobApplicationCid hrManager =
+  submitMustFail hrManager $ exerciseCmd jobApplicationCid Reject
+
 -- Scenarios
 
 -- hr manager `can` create multiple job offers.
@@ -161,3 +169,43 @@ scenario8 = script do
   cantCreateJobOffer random random
   cantCreateJobApplication random random summary
   cantCreateJobContract random random
+
+-- hr manager `can` reject a job application.
+scenario9: Script ()
+scenario9 = script do
+  testParties <- setupTestParties
+  let hrManager = testParties.hrManager
+  let public = testParties.public
+  let candidate = testParties.candidate
+  jobOfferCid <- canCreateJobOffer hrManager public
+  let summary = "CandidateCSV.pdf"
+  jobApplicationCid <- canApplyToJobOffer jobOfferCid candidate summary public
+  canRejectJobApplication jobApplicationCid hrManager
+  pure ()
+
+-- hr manager `cant` reject a job application twice.
+scenario10: Script ()
+scenario10 = script do
+  testParties <- setupTestParties
+  let hrManager = testParties.hrManager
+  let public = testParties.public
+  let candidate = testParties.candidate
+  jobOfferCid <- canCreateJobOffer hrManager public
+  let summary = "CandidateCSV.pdf"
+  jobApplicationCid <- canApplyToJobOffer jobOfferCid candidate summary public
+  canRejectJobApplication jobApplicationCid hrManager
+  cantRejectJobApplication jobApplicationCid hrManager
+  pure ()
+
+-- candidate `cant` reject its own job application.
+scenario11: Script ()
+scenario11 = script do
+  testParties <- setupTestParties
+  let hrManager = testParties.hrManager
+  let public = testParties.public
+  let candidate = testParties.candidate
+  jobOfferCid <- canCreateJobOffer hrManager public
+  let summary = "CandidateCSV.pdf"
+  jobApplicationCid <- canApplyToJobOffer jobOfferCid candidate summary public
+  cantRejectJobApplication jobApplicationCid candidate
+  pure ()
