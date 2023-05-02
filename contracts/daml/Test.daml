@@ -2,6 +2,7 @@ module Test where
 
 import Model
 import Daml.Script
+import qualified DA.Set as Set
 
 -- Helpers
 
@@ -20,13 +21,23 @@ setupTestParties = script do
     candidate
     public
 
-canCreateJobOffer: Party -> Party -> Script (ContractId JobOffer)
-canCreateJobOffer hrManager public =
-  submit hrManager $ createCmd $ JobOffer with hrManager; public
+canCreateJobOfferPublicState: Int -> Party -> Party -> Script (ContractId JobOfferPublicState)
+canCreateJobOfferPublicState jobId hrManager public = do
+  let jobApplicationCids = Set.empty
+  submit hrManager $ createCmd $ JobOfferPublicState with jobId; hrManager; public; jobApplicationCids
 
-cantCreateJobOffer: Party -> Party -> Script ()
-cantCreateJobOffer hrManager public =
-  submitMustFail hrManager $ createCmd $ JobOffer with hrManager; public
+cantCreateJobOfferPublicState: Int -> Party -> Party -> Script ()
+cantCreateJobOfferPublicState jobId hrManager public = do
+  let jobApplicationCids = Set.empty
+  submitMustFail hrManager $ createCmd $ JobOfferPublicState with jobId; hrManager; public; jobApplicationCids
+
+canCreateJobOffer: Int -> Party -> Party -> Script (ContractId JobOffer)
+canCreateJobOffer jobId hrManager public =
+  submit hrManager $ createCmd $ JobOffer with jobId; hrManager; public
+
+cantCreateJobOffer: Int -> Party -> Party -> Script ()
+cantCreateJobOffer jobId hrManager public =
+  submitMustFail hrManager $ createCmd $ JobOffer with jobId; hrManager; public
 
 canCreateJobApplication: Party -> Party -> Text -> Script (ContractId JobApplication)
 canCreateJobApplication candidate hrManager summary =
@@ -78,14 +89,32 @@ cantDeclineJobApplication jobApplicationCid hrManager =
 
 -- Scenarios
 
--- hr manager `can` create multiple job offers.
+-- hr manager `can` create multiple job offer public states using different jobId.
+scenario0: Script ()
+scenario0 = script do
+  testParties <- setupTestParties
+  let hrManager = testParties.hrManager
+  let public = testParties.public
+  let jobId1 = 1
+  canCreateJobOfferPublicState jobId1 hrManager public
+  -- hr manager `cant` create multiple job offer public states using same jobId.
+  cantCreateJobOfferPublicState jobId1 hrManager public
+  let jobId2 = 2
+  canCreateJobOfferPublicState jobId2 hrManager public
+  pure ()
+
+-- hr manager `can` create multiple job offers using different jobId.
 scenario1: Script ()
 scenario1 = script do
   testParties <- setupTestParties
   let hrManager = testParties.hrManager
   let public = testParties.public
-  canCreateJobOffer hrManager public
-  canCreateJobOffer hrManager public
+  let jobId1 = 1
+  canCreateJobOffer jobId1 hrManager public
+  -- hr manager `cant` create multiple job offers using same jobId.
+  cantCreateJobOffer jobId1 hrManager public
+  let jobId2 = 2
+  canCreateJobOffer jobId2 hrManager public
   pure ()
 
 -- candidate `can` apply to a job offer.
@@ -95,7 +124,9 @@ scenario2 = script do
   let hrManager = testParties.hrManager
   let public = testParties.public
   let candidate = testParties.candidate
-  jobOfferCid <- canCreateJobOffer hrManager public
+  let jobId = 1
+  canCreateJobOfferPublicState jobId hrManager public
+  jobOfferCid <- canCreateJobOffer jobId hrManager public
   let summary = "CandidateCSV.pdf"
   canApplyToJobOffer jobOfferCid candidate summary public
   pure ()
@@ -107,7 +138,9 @@ scenario3 = script do
   let hrManager = testParties.hrManager
   let public = testParties.public
   let candidate = testParties.candidate
-  jobOfferCid <- canCreateJobOffer hrManager public
+  let jobId = 1
+  canCreateJobOfferPublicState jobId hrManager public
+  jobOfferCid <- canCreateJobOffer jobId hrManager public
   let summary = "CandidateCSV.pdf"
   canApplyToJobOffer jobOfferCid candidate summary public
   cantApplyToJobOffer jobOfferCid candidate summary public
@@ -122,7 +155,9 @@ scenario4 = script do
   let hrManager = testParties.hrManager
   let public = testParties.public
   let candidate = testParties.candidate
-  jobOfferCid <- canCreateJobOffer hrManager public
+  let jobId = 1
+  canCreateJobOfferPublicState jobId hrManager public
+  jobOfferCid <- canCreateJobOffer jobId hrManager public
   let summary = "CandidateCSV.pdf"
   jobApplicationCid <- canApplyToJobOffer jobOfferCid candidate summary public
   canAcceptJobApplication jobApplicationCid hrManager
@@ -135,7 +170,9 @@ scenario5 = script do
   let hrManager = testParties.hrManager
   let public = testParties.public
   let candidate = testParties.candidate
-  jobOfferCid <- canCreateJobOffer hrManager public
+  let jobId = 1
+  canCreateJobOfferPublicState jobId hrManager public
+  jobOfferCid <- canCreateJobOffer jobId hrManager public
   let summary = "CandidateCSV.pdf"
   jobApplicationCid <- canApplyToJobOffer jobOfferCid candidate summary public
   canAcceptJobApplication jobApplicationCid hrManager
@@ -151,7 +188,9 @@ scenario6 = script do
   let hrManager = testParties.hrManager
   let public = testParties.public
   let candidate = testParties.candidate
-  jobOfferCid <- canCreateJobOffer hrManager public
+  let jobId = 1
+  canCreateJobOfferPublicState jobId hrManager public
+  jobOfferCid <- canCreateJobOffer jobId hrManager public
   let summary = "CandidateCSV.pdf"
   jobApplicationCid <- canApplyToJobOffer jobOfferCid candidate summary public
   cantAcceptJobApplication jobApplicationCid candidate
@@ -164,7 +203,9 @@ scenario7 = script do
   let hrManager = testParties.hrManager
   let public = testParties.public
   let candidate = testParties.candidate
-  jobOfferCid <- canCreateJobOffer hrManager public
+  let jobId = 1
+  canCreateJobOfferPublicState jobId hrManager public
+  jobOfferCid <- canCreateJobOffer jobId hrManager public
   let summary = "CandidateCSV.pdf"
   cantApplyToJobOffer jobOfferCid hrManager summary public
   pure ()
@@ -173,8 +214,11 @@ scenario7 = script do
 scenario8: Script ()
 scenario8 = script do
   random <- allocateParty "Random"
+  other <- allocateParty "Other"
+  let jobId = 1
+  canCreateJobOfferPublicState jobId random other
+  cantCreateJobOffer jobId random random
   let summary = "CandidateCSV.pdf"
-  cantCreateJobOffer random random
   cantCreateJobApplication random random summary
   cantCreateJobContract random random
 
@@ -185,7 +229,9 @@ scenario9 = script do
   let hrManager = testParties.hrManager
   let public = testParties.public
   let candidate = testParties.candidate
-  jobOfferCid <- canCreateJobOffer hrManager public
+  let jobId = 1
+  canCreateJobOfferPublicState jobId hrManager public
+  jobOfferCid <- canCreateJobOffer jobId hrManager public
   let summary = "CandidateCSV.pdf"
   jobApplicationCid <- canApplyToJobOffer jobOfferCid candidate summary public
   canRejectJobApplication jobApplicationCid hrManager
@@ -198,7 +244,9 @@ scenario10 = script do
   let hrManager = testParties.hrManager
   let public = testParties.public
   let candidate = testParties.candidate
-  jobOfferCid <- canCreateJobOffer hrManager public
+  let jobId = 1
+  canCreateJobOfferPublicState jobId hrManager public
+  jobOfferCid <- canCreateJobOffer jobId hrManager public
   let summary = "CandidateCSV.pdf"
   jobApplicationCid <- canApplyToJobOffer jobOfferCid candidate summary public
   canRejectJobApplication jobApplicationCid hrManager
@@ -212,7 +260,9 @@ scenario11 = script do
   let hrManager = testParties.hrManager
   let public = testParties.public
   let candidate = testParties.candidate
-  jobOfferCid <- canCreateJobOffer hrManager public
+  let jobId = 1
+  canCreateJobOfferPublicState jobId hrManager public
+  jobOfferCid <- canCreateJobOffer jobId hrManager public
   let summary = "CandidateCSV.pdf"
   jobApplicationCid <- canApplyToJobOffer jobOfferCid candidate summary public
   cantRejectJobApplication jobApplicationCid candidate
@@ -225,7 +275,9 @@ scenario12 = script do
   let hrManager = testParties.hrManager
   let public = testParties.public
   let candidate = testParties.candidate
-  jobOfferCid <- canCreateJobOffer hrManager public
+  let jobId = 1
+  canCreateJobOfferPublicState jobId hrManager public
+  jobOfferCid <- canCreateJobOffer jobId hrManager public
   let summary = "CandidateCSV.pdf"
   jobApplicationCid <- canApplyToJobOffer jobOfferCid candidate summary public
   canDeclineJobApplication jobApplicationCid candidate
@@ -238,7 +290,9 @@ scenario13 = script do
   let hrManager = testParties.hrManager
   let public = testParties.public
   let candidate = testParties.candidate
-  jobOfferCid <- canCreateJobOffer hrManager public
+  let jobId = 1
+  canCreateJobOfferPublicState jobId hrManager public
+  jobOfferCid <- canCreateJobOffer jobId hrManager public
   let summary = "CandidateCSV.pdf"
   jobApplicationCid <- canApplyToJobOffer jobOfferCid candidate summary public
   canDeclineJobApplication jobApplicationCid candidate
@@ -252,7 +306,9 @@ scenario14 = script do
   let hrManager = testParties.hrManager
   let public = testParties.public
   let candidate = testParties.candidate
-  jobOfferCid <- canCreateJobOffer hrManager public
+  let jobId = 1
+  canCreateJobOfferPublicState jobId hrManager public
+  jobOfferCid <- canCreateJobOffer jobId hrManager public
   let summary = "CandidateCSV.pdf"
   jobApplicationCid <- canApplyToJobOffer jobOfferCid candidate summary public
   cantDeclineJobApplication jobApplicationCid hrManager

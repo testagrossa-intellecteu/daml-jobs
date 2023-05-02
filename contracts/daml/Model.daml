@@ -1,7 +1,25 @@
 module Model where
 
+import DA.Set (Set)
+
+template JobOfferPublicState
+  with
+    jobId: Int
+    hrManager: Party
+    public: Party
+    jobApplicationCids: Set (ContractId JobApplication)
+  where
+    signatory hrManager
+    observer public
+
+    ensure hrManager /= public
+    
+    key (hrManager, jobId): (Party, Int)
+    maintainer key._1
+
 template JobOffer
   with
+    jobId: Int
     hrManager: Party
     public: Party
   where
@@ -10,6 +28,9 @@ template JobOffer
 
     ensure hrManager /= public
 
+    key (hrManager, jobId): (Party, Int)
+    maintainer key._1
+  
     nonconsuming choice NewJobApplication: ContractId JobApplication
       with
         candidate: Party

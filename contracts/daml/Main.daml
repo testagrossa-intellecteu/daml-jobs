@@ -2,6 +2,7 @@ module Main where
 
 import Model
 import Daml.Script
+import qualified DA.Set as Set
 
 template HRManagerService 
   with 
@@ -18,10 +19,13 @@ template HRManagerService
 
     nonconsuming choice CreateJobOffer: ContractId JobOffer
       with
+        jobId: Int
         public: Party
       controller hrManager
       do
-        create $ JobOffer with hrManager; public
+        let jobApplicationCids = Set.empty
+        create $ JobOfferPublicState with jobId; hrManager; public; jobApplicationCids
+        create $ JobOffer with jobId; hrManager; public
 
 setup: Script ()
 setup = script do
@@ -50,7 +54,8 @@ setup = script do
     hrServiceCid <- submit userAdmin $ createCmd HRManagerService with userAdmin; hrManager
     
     -- 5. Create a job offer
-    jobOfferCid <- submit hrManager $ exerciseCmd hrServiceCid CreateJobOffer with public
+    let jobId = 1
+    jobOfferCid <- submit hrManager $ exerciseCmd hrServiceCid CreateJobOffer with jobId; public
 
     ---6. Create job applications for both candidates to above job offer
     let (summary, otherSummary) = ("CSV.pdf", "OtherCSV.pdf")
