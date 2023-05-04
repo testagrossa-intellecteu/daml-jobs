@@ -14,10 +14,8 @@ data TestParties = TestParties with
 
 setupTestParties: Script TestParties
 setupTestParties = script do
-  hrManager <- allocateParty "HR Manager"
-  candidate <- allocateParty "Candidate"
-  other <- allocateParty "OtherCandidate"
-  public <- allocateParty "Public"
+  let parties =  ["HR Manager", "Candidate", "OtherCandidate", "Public"]
+  [hrManager, candidate, other, public] <- mapA allocateParty parties
   return $ TestParties with
     hrManager
     candidate

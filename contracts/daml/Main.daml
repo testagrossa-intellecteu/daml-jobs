@@ -29,35 +29,19 @@ template HRManagerService
 
 setup: Script ()
 setup = script do
-    -- 1. Allocate parties with the given display name
-    hrManager <- allocatePartyWithHint "HRManager" (PartyIdHint"hr")
-    candidate <- allocatePartyWithHint "Candidate" (PartyIdHint "usr")
-    otherCandidate <- allocatePartyWithHint "OtherCandidate" (PartyIdHint "other-usr")
-    public <- allocatePartyWithHint "Public" (PartyIdHint "pub")
-    userAdmin <- allocatePartyWithHint "UserAdmin" (PartyIdHint "admin") 
+    -- Allocate parties
+    public <- createParty "pub"
+    let parties = ["hr", "usr", "other-usr", "admin"]
+    [hrManager, candidate, otherCandidate, userAdmin] <- mapA (createPartyWithRights [CanReadAs public]) parties
 
-    -- 2. Construct user-ids from text
-    hrManagerId <- validateUserId "HR"
-    candidateId <- validateUserId "User"
-    otherCandidateId <- validateUserId "OtherUser"
-    publicId <- validateUserId "Pub"
-    userAdminId <- validateUserId "Admin"
-
-    -- 3. Create users with the given rights
-    createUser (User publicId (Some public)) [CanActAs public]
-    createUser (User hrManagerId (Some hrManager)) [CanActAs hrManager, CanReadAs public]
-    createUser (User candidateId (Some candidate)) [CanActAs candidate, CanReadAs public]
-    createUser (User otherCandidateId (Some otherCandidate)) [CanActAs otherCandidate, CanReadAs public]
-    createUser (User userAdminId (Some userAdmin)) [CanActAs userAdmin, CanReadAs public]
-
-    -- 4. Create an hr manager account service
+    -- Create an hr manager account service
     hrServiceCid <- submit userAdmin $ createCmd HRManagerService with userAdmin; hrManager
     
-    -- 5. Create a job offer
+    -- Create a job offer
     let jobId = 1
     jobOfferCid <- submit hrManager $ exerciseCmd hrServiceCid CreateJobOffer with jobId; public
 
-    ---6. Create job applications for both candidates to above job offer
+    -- Create job applications for both candidates to above job offer
     let (summary, otherSummary) = ("CSV.pdf", "OtherCSV.pdf")
     submitMulti [candidate] [public] $ exerciseCmd jobOfferCid NewJobApplication with candidate; summary
     submitMulti [otherCandidate] [public] $ exerciseCmd jobOfferCid NewJobApplication with
@@ -65,3 +49,21 @@ setup = script do
       summary=otherSummary
 
     return ()
+
+
+-- | Creates a user + party given a hint.
+createParty: Text -> Script Party
+createParty name = do
+  createPartyWithRights [] name
+
+-- | Creates a user + party given extra user rights and a hint.
+createPartyWithRights: [UserRight] -> Text -> Script Party
+createPartyWithRights rights name = do
+  -- 1. Allocate party with the given display name
+  party <- allocatePartyWithHint name $ PartyIdHint name
+  -- 2. Construct user-id from text
+  userId <- validateUserId name
+  -- 3. Create users with the given rights
+  createUser (User userId (Some party)) (CanActAs party :: rights)
+  pure party
+
